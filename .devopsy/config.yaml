@@ -1,0 +1,23 @@
+# devopsy config: see devopsy-cli's README, "Servers". Committed: no
+# secrets and no servers here. The server comes from the address
+# (devopsy @vm1:own/prod), or DEVOPSY_SERVER in .devopsy/.env or the
+# environment, like DEVOPSY_SERVER=devopsy@203.0.113.10.
+#
+# Instances: one per Cloudflare account whose zones route through this
+# server (a tunnel belongs to an account), named by the target
+# (@vm1:own/prod, @vm1:acme/prod) or DEVOPSY_INSTANCE. Each lives in
+# cloudflared/<instance>/prod under the server's release root, as its own
+# compose project (cloudflared-<instance>-prod), with its own token in its
+# shared/.env.
+project: cloudflared
+instances: true
+# The tunnel's token, masked in devopsy's output. Set per instance:
+#   devopsy @vm1:own/prod --vars set PROXY_TUNNEL_TOKEN
+secrets: [PROXY_TUNNEL_TOKEN]
+defaults:
+  mode: image
+  release: deploy
+  rollback: deploy
+  reload: deploy    # applies a new token: devopsy @vm1:own/prod --reload
+environments:
+  prod: {}

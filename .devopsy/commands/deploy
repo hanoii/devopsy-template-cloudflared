@@ -1,0 +1,18 @@
+#!/bin/sh
+## Description: Roll out the connectors one at a time (run on the server by release)
+# The environments' release, rollback and reload run step (config.yaml),
+# run on the server by `devopsy @<target> --release`, `--rollback` and
+# `--reload`, and locally by `devopsy --release`. devopsy pulled the image
+# before the release went live (image mode).
+#
+# One connector at a time, each up and healthy (a connection to the edge:
+# the healthcheck in compose.yaml) before the next is touched, so the
+# tunnel never has zero connectors while a release changes the image or a
+# reload changes the token. Compose recreates only what changed: a
+# connector already on this image and token stays as it is. Then the rest
+# of the project, with what a change here no longer defines removed.
+set -eu
+devopsy up -d --wait cloudflared-a
+devopsy up -d --wait cloudflared-b
+devopsy up -d --wait --remove-orphans
+echo "deploy: connectors: $(devopsy ps --format '{{.Service}} {{.Health}}' | sort | paste -sd ',' - | sed 's/,/, /g')" >&2

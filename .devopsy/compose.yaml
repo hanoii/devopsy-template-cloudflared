@@ -1,0 +1,76 @@
+# A Cloudflare Tunnel's connectors for a devopsy-template-traefik server:
+# two cloudflared processes connect out to Cloudflare, visitors come in
+# through them, and the server publishes no port for its sites. Both hand
+# every request to Traefik's `tunnel` entrypoint over the `tunnel` network
+# it creates, as plain HTTP: TLS ended at Cloudflare's edge. Where they
+# hand it is not here: the tunnel's published route, in the Cloudflare
+# dashboard, sends `*.<base domain>` to http://traefik.tunnel:8081.
+#
+# PROXY_TUNNEL_TOKEN is the one secret, in .devopsy/.env (on servers the
+# instance's shared/.env). It only lets a connector run that tunnel.
+#
+# Two services, not `deploy: {replicas: 2}`: compose recreates every
+# replica of a changed service at once, so a release or a token rotation
+# would drop both connectors together and Cloudflare would answer 1033
+# until one reconnected. `deploy` brings cloudflared-a up and healthy,
+# then cloudflared-b, so the tunnel always has a connector.
+x-cloudflared: &cloudflared
+  # Exact: cloudflared publishes no series tag (its versions are dates,
+  # 2026.10.5), so a bump is an edit here and a release, which recreates
+  # the connectors one at a time. Never latest.
+  image: cloudflare/cloudflared:2026.10.5
+  # The image's entrypoint is `cloudflared --no-autoupdate`; the token
+  # and the metrics address come from the environment (below).
+  command: [tunnel, run]
+  restart: unless-stopped
+  # Hardening checklist, for this service and the ones you add:
+  # - a fixed non-root UID, not the deploy user (1000, in the docker group:
+  #   an escape would land as root-equivalent): the image's own 65532,
+  #   stated here so a change upstream never changes it silently;
+  # - a read-only root filesystem: cloudflared writes nothing (checked);
+  # - cap_drop ALL, adding back only a capability a stated reason needs
+  #   (none here: it only connects out, and listens above 1024);
+  # - no-new-privileges, so nothing gains privilege through setuid files;
+  # - in images you build, no setuid binaries and no file capabilities
+  #   the service does not need.
+  user: "65532:65532"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  environment:
+    TUNNEL_TOKEN: ${PROXY_TUNNEL_TOKEN:?the tunnel's token, from the Cloudflare dashboard}
+    # The metrics endpoint, for the healthcheck (`tunnel ready` reads the
+    # same variable, so both name one address) and for the server's
+    # Traefik, which reports each connector's /ready in `domains`. On
+    # the container's address only: nothing publishes the port.
+    TUNNEL_METRICS: 0.0.0.0:2000
+  healthcheck:
+    # /ready on the metrics address: 200 once a connection to the edge is
+    # up, 503 until then (a wrong token, no way out on 7844), so `up
+    # --wait` waits for a connector that serves, and a token nobody
+    # accepts fails the release instead of leaving a connector retrying.
+    test: [CMD, cloudflared, tunnel, ready]
+    interval: 10s
+    start_period: 30s
+    start_interval: 2s
+  # On SIGTERM cloudflared stops taking new requests (the edge sends them
+  # to the other connector) and waits for the ones in flight, up to its
+  # own 30 s grace period: let it, where Docker's default kills at 10 s.
+  stop_grace_period: 40s
+  # The `tunnel` network alone, Traefik's: the connectors reach Traefik
+  # and the Internet through it, and nothing on the server needs to reach
+  # them, so no network of this project's own (no `default`).
+  networks: [tunnel]
+
+services:
+  cloudflared-a: *cloudflared
+  cloudflared-b: *cloudflared
+
+networks:
+  # Created by devopsy-template-traefik, with that fixed name: release it
+  # first. Traefik's `tunnel` entrypoint listens on it, and Traefik
+  # trusts the visitor's IP (CF-Connecting-IP) from its subnet alone.
+  tunnel:
+    name: tunnel
+    external: true
