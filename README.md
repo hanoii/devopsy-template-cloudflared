@@ -108,7 +108,7 @@ second instance is the answer and what the alternatives are.
   every replica of a changed service at once.
 - **Connected means healthy.** Each connector's healthcheck is
   `cloudflared tunnel ready`, which asks its own metrics endpoint
-  (`/ready`, on the container's address, port 2000, nothing published)
+  (`/ready`, on the container's loopback, port 2000)
   and fails until a connection to the edge is up, so `up --wait` waits
   for a connector that serves, and a token nobody accepts fails the
   release before the second connector is touched.

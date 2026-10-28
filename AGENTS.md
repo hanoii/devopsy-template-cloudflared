@@ -92,10 +92,10 @@ and no URL of their own.
   and its healthcheck name one address, where a flag would be written
   twice (`tunnel --metrics ... run` and `tunnel --metrics ... ready`) and
   could drift. Without it `ready` fails with `http:///ready: no Host in
-  request URL` (verified). `0.0.0.0:2000` binds the container's address
-  as well as loopback, so the server's Traefik can read each connector's
-  `/ready` over the `tunnel` network for its `domains` report; nothing
-  publishes the port.
+  request URL` (verified). On loopback, `127.0.0.1:2000`: only the
+  healthcheck reads it, and the Traefik template's `domains` reports each
+  connector by its Docker health, so nothing on the `tunnel` network
+  reaches it.
 - **`command: [tunnel, run]` alone:** the image's entrypoint is
   `cloudflared --no-autoupdate` already, and the token comes from
   `TUNNEL_TOKEN`, so the command names only the subcommand.

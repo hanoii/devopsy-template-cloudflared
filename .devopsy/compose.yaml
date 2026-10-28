@@ -41,10 +41,10 @@ x-cloudflared: &cloudflared
   environment:
     TUNNEL_TOKEN: ${PROXY_TUNNEL_TOKEN:?the tunnel's token, from the Cloudflare dashboard}
     # The metrics endpoint, for the healthcheck (`tunnel ready` reads the
-    # same variable, so both name one address) and for the server's
-    # Traefik, which reports each connector's /ready in `domains`. On
-    # the container's address only: nothing publishes the port.
-    TUNNEL_METRICS: 0.0.0.0:2000
+    # same variable, so both name one address). Loopback only: nothing
+    # else needs it, and the server's Traefik reports each connector by
+    # its health in `domains`.
+    TUNNEL_METRICS: 127.0.0.1:2000
   healthcheck:
     # /ready on the metrics address: 200 once a connection to the edge is
     # up, 503 until then (a wrong token, no way out on 7844), so `up
