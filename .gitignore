@@ -1,0 +1,7 @@
+/.devopsy/.env
+/.devopsy/mnt
+/.devopsy/compose.override.y*ml
+/.devopsy/config.local.yaml
+
+# Worktrees for parallel work
+/.worktrees/
