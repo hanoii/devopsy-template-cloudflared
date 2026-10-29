@@ -100,6 +100,14 @@ instance. Usually one is enough: the server serves one client, whose
 account holds every zone. The Traefik template's README says when a
 second instance is the answer and what the alternatives are.
 
+A tunnel is one server's, too: never release the same token on two
+servers. Cloudflare accepts it, as replicas of one tunnel, but sends
+each request to whichever connector it picks, with no say per hostname,
+and each connector reaches its own server's Traefik: a site on one
+server would answer from the other with a 404, at random. Each server
+gets its own tunnel, and moving a site to another server moves its
+hostname to that server's tunnel.
+
 ## How it works
 
 - **Two connectors, one at a time.** `compose.yaml` defines
