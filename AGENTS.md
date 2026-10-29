@@ -38,7 +38,8 @@ and no URL of their own.
   network because nothing on the server needs to reach a connector, and
   every network a project owns is one more thing to name and check. The
   connectors' egress (7844 to Cloudflare) goes through that network's
-  gateway. Never a third, shared name (devopsy-cli's README, "Networks").
+  gateway. Never a third, shared name: a project joins another's
+  network as `external`.
 - **Two services, never `deploy: {replicas: 2}`.** Compose recreates
   every replica of a changed service at once, so a release or a token
   rotation dropped both connectors together, and Cloudflare answered
@@ -113,8 +114,10 @@ and no URL of their own.
   fails once the healthcheck turns unhealthy (its `start_period`, then
   three failures: 52 s measured). Either way `deploy` fails at
   `cloudflared-a`, before touching `cloudflared-b`, which goes on
-  serving on the token it had: a release goes back to the release
-  before, a reload changes nothing else. Without a network path out at
+  serving on the token it had. The token is the instance's
+  `shared/.env`, not a release's, so the release before fails the same
+  way when a release goes back to it: the fix is a good token and a
+  reload. Without a network path out at
   all (`--network none`) cloudflared exits after its edge discovery
   fails, and Docker restarts it.
 - **`tunnel ready` prints nothing on success** (exit 0), and on failure

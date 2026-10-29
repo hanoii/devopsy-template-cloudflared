@@ -73,9 +73,11 @@ devopsy @vm1:own/prod --reload
 
 A token no tunnel accepts fails the deploy at the first connector, which
 never gets a connection (its healthcheck), while the second still serves
-on the token it had; a release then goes back to the release before, and
-a reload changes nothing else. `devopsy @vm1:own/prod logs cloudflared-a`
-says why.
+on the token it had. The token is the instance's, not a release's: a
+release going back to the one before fails the same way, so the tunnel
+runs on the second connector alone until a good token is set and
+applied (`--vars set`, then `--reload`). `devopsy @vm1:own/prod logs
+cloudflared-a` says why.
 
 ## One instance per account
 
