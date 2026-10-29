@@ -82,7 +82,7 @@ says why.
 A tunnel belongs to a Cloudflare account, not to a zone or a server: any
 zone of that account points a proxied CNAME at it
 (`<tunnel id>.cfargotunnel.com`), and a zone of another account cannot
-(Cloudflare answers error 1014). So this project runs one instance per
+(Cloudflare answers error 1033, as when no connector is up). So this project runs one instance per
 account whose zones route through the server, each with its own tunnel
 and token, and each account publishes its own routes to the same
 `http://traefik.tunnel:8081`:

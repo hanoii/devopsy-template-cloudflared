@@ -57,7 +57,8 @@ and no URL of their own.
 - **One instance per Cloudflare account** (`instances: true`): a
   tunnel belongs to an account, not to a zone or a server, and a proxied
   CNAME to `<id>.cfargotunnel.com` only works from a zone of the
-  tunnel's own account (error 1014 from another). devopsy runs several
+  tunnel's own account (from another, error 1033, as when no connector
+  is up: verified). devopsy runs several
   instances of one project side by side (`cloudflared/<instance>/prod`,
   each its own compose project and `shared/.env`), so a second account is
   a second target, not a second service or an override block; the token
