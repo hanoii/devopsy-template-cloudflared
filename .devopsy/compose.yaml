@@ -15,10 +15,12 @@
 # until one reconnected. `deploy` brings cloudflared-a up and healthy,
 # then cloudflared-b, so the tunnel always has a connector.
 x-cloudflared: &cloudflared
-  # Exact: cloudflared publishes no series tag (its versions are dates,
-  # 2026.10.5), so a bump is an edit here and a release, which recreates
-  # the connectors one at a time. Never latest.
-  image: cloudflare/cloudflared:2026.10.5
+  # latest: cloudflared publishes no series tag (its versions are dates,
+  # 2026.10.5), and a connector is never rolled back, so every release
+  # pulls the newest and recreates the connectors one at a time when it
+  # changed. One that never connects fails the release at cloudflared-a:
+  # pin the last good version here (2026.10.5) and release.
+  image: cloudflare/cloudflared:latest
   # The image's entrypoint is `cloudflared --no-autoupdate`; the token
   # and the metrics address come from the environment (below).
   command: [tunnel, run]

@@ -73,10 +73,9 @@ devopsy @vm1:own/prod --reload
 
 A token no tunnel accepts fails the deploy at the first connector, which
 never gets a connection (its healthcheck), while the second still serves
-on the token it had. The token is the instance's, not a release's: a
-release going back to the one before fails the same way, so the tunnel
-runs on the second connector alone until a good token is set and
-applied (`--vars set`, then `--reload`). `devopsy @vm1:own/prod logs
+on the token it had. The token is the instance's, not a release's, so
+the tunnel runs on the second connector alone until a good token is set
+and applied (`--vars set`, then `--reload`). `devopsy @vm1:own/prod logs
 cloudflared-a` says why.
 
 ## One instance per account
@@ -125,13 +124,33 @@ second instance is the answer and what the alternatives are.
   network's subnet, so sites see visitors, not the connector.
 - **Hardening.** `cloudflared` runs as the image's own UID 65532, with a
   read-only root filesystem, no capabilities and `no-new-privileges`; the
-  image has no shell. Each release pulls the exact tag `compose.yaml`
-  pins (`cloudflare/cloudflared:2026.10.5`: cloudflared publishes no
-  series tag), so a bump is an edit and a release, and a rollback takes
-  it back.
+  image has no shell.
 - **Destroying.** `devopsy @vm1:own/prod --destroy` takes the connectors
   down and removes the instance; delete the tunnel in the dashboard too,
   or keep it for another server.
+
+## Updates
+
+`compose.yaml` runs `cloudflare/cloudflared:latest`: cloudflared publishes
+no series tag to float on (its versions are dates, like `2026.10.5`), and a
+connector is something to keep current, never to roll back. So
+`config.yaml` keeps one release.
+
+- **A release updates it.** Each release pulls `latest` and, when it
+  changed, recreates the connectors one at a time; a `--reload` pulls
+  nothing. A server you never release keeps the version it has, so
+  release on a schedule (monthly, from CI or a cron) or whenever you
+  release the server's other projects. Cloudflare supports a version for
+  about a year.
+- **A version that never connects fails the release at the first
+  connector,** the second still serving on the version it had: pin the
+  last good version in `compose.yaml` (the second connector's log,
+  `devopsy @vm1:own/prod logs cloudflared-b`, names the version it runs)
+  and release. There
+  is no rollback to go back to.
+- **Two servers released at different times** run different versions,
+  which nothing in git records; `devopsy @vm1:own/prod logs
+  cloudflared-a` shows which.
 
 `cloudflared` logs a warning when the host's UDP receive buffer is small
 for QUIC (`net.core.rmem_max`); it works all the same, and a `sysctl`

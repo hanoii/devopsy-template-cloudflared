@@ -16,6 +16,10 @@ instances: true
 secrets: [PROXY_TUNNEL_TOKEN]
 defaults:
   mode: image
+  # One release kept: the image is latest, so an older release would run
+  # the same image, nothing to go back to.
+  releases:
+    keep: 1
   release: deploy
   rollback: deploy
   reload: deploy    # applies a new token: devopsy @vm1:own/prod --reload

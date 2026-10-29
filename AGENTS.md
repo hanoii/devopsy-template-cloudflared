@@ -23,13 +23,19 @@ and no URL of their own.
 
 ## Rules
 
-- **Exact pin, bumped by hand:** `cloudflare/cloudflared:<version>`,
-  the version a date (`2026.10.5`). Why: cloudflared publishes no series
-  tag (only exact versions, `latest` and build ids), and `latest` would
-  change what runs with no commit. A bump is an edit and a release, which
-  recreates the connectors one at a time; a rollback takes the pin back
-  (devopsy-cli's README, "Choosing tags"). Check the image's `USER` and
-  `ENTRYPOINT` again when bumping (below), and read the release notes.
+- **`latest`, one release kept** (decided 2026-10-29, over an exact pin
+  bumped by hand): cloudflared publishes no series tag (only exact
+  versions, dates like `2026.10.5`, `latest` and build ids), and a
+  connector is kept current, never rolled back, so `releases: keep: 1`.
+  Each release pulls it; `deploy` recreates the connectors one at a time
+  when it changed. Costs, accepted: what runs changes with no commit,
+  servers released apart run different versions, and a version that
+  never connects fails the release at `cloudflared-a` with no rollback
+  (a rollback would pull `latest` again): the way out is pinning the
+  last good version and releasing. A server nobody releases gets no
+  updates: the README says to release on a schedule. `user:` is set in
+  `compose.yaml`, so a new image's `USER` changes nothing; its
+  entrypoint (`cloudflared --no-autoupdate`, below) is the image's.
 - **The `tunnel` network alone, external, and no `default` network.**
   The Traefik template creates it with that fixed name (as it does
   `traefik`), its `tunnel` entrypoint listens on it, and it trusts the
@@ -115,9 +121,7 @@ and no URL of their own.
   three failures: 52 s measured). Either way `deploy` fails at
   `cloudflared-a`, before touching `cloudflared-b`, which goes on
   serving on the token it had. The token is the instance's
-  `shared/.env`, not a release's, so the release before fails the same
-  way when a release goes back to it: the fix is a good token and a
-  reload. Without a network path out at
+  `shared/.env`, not a release's: the fix is a good token and a reload. Without a network path out at
   all (`--network none`) cloudflared exits after its edge discovery
   fails, and Docker restarts it.
 - **`tunnel ready` prints nothing on success** (exit 0), and on failure
