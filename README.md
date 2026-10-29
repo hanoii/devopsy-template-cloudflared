@@ -24,10 +24,12 @@ A tunneled server is the Traefik template released first, then this one.
    It creates the `tunnel` network, which this project joins, and listens
    on it for the connectors: a release here fails while that network does
    not exist.
-2. **The tunnel, in the Cloudflare dashboard** (Zero Trust, Networks,
-   Tunnels): create a tunnel of the Cloudflared type and name it after
-   the server; copy its token from the connector install command (the
-   value after `--token`); publish one application route, hostname
+2. **The tunnel, in the Cloudflare dashboard** (Networking, Tunnels):
+   create a tunnel of the Cloudflared type and name it after the server;
+   copy its token from the connector install command (the value after
+   `--token`), without running the command. The dashboard then waits for
+   a connector: release this project (step 3), and once it shows the two
+   connectors, publish one application route, hostname
    `*.<base domain>` (the subdomain `*`), service `http://traefik.tunnel:8081`.
    That is where every request goes: Traefik's `tunnel` entrypoint, by
    its network-scoped name, which then routes it to the site by host.
