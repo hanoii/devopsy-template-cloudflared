@@ -1,6 +1,6 @@
 # devopsy-template-cloudflared
 
-A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)'s
+A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)'s
 connectors for a [devopsy-template-traefik](https://github.com/hanoii/devopsy-template-traefik)
 server, released with [devopsy](https://github.com/hanoii/devopsy-cli): two
 `cloudflared` services connect out to Cloudflare, visitors come in through
@@ -47,8 +47,8 @@ devopsy @vm1:own/prod logs -f
 
 The dashboard shows the two connectors on the tunnel once the release is
 done, and the sites answer at their wildcard URLs through Cloudflare.
-`devopsy @<server>-traefik domains <host>` (the Traefik template) reports
-the hosts and the connectors it sees on the tunnel network.
+`devopsy @<server>-traefik domains` (the Traefik template) reports the
+hosts and the connectors it sees on the tunnel network.
 
 ## The token
 
@@ -139,8 +139,9 @@ raising it to 7500000 silences it (devopsy-server's README).
 
 With a local devopsy-template-traefik running (it creates the `tunnel`
 network) and a token in `.devopsy/.env`, the connectors run locally
-too, as a second pair of connectors on that tunnel, and visitors of its
-routes reach your local Traefik as well as the server's:
+too. Use a tunnel of its own, never a server's: Cloudflare spreads a
+tunnel's visitors over all its connectors, so a server's token here
+would send part of its visitors to your local Traefik.
 
 ```sh
 devopsy --release
