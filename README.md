@@ -10,15 +10,12 @@ There is one instance per Cloudflare account.
 
 ## Using this template
 
-It is a starting point to own, not a dependency. Start a project from it
+This template is meant to be copied and changed. Start a project from it
 on GitHub ("Use this template"), or clone it and keep this repository as a
-remote (`upstream`) to pull its changes when you choose. Nothing but your
-own release updates your copy or what runs on your servers.
+remote (`upstream`) to pull its changes when you choose. Your copy and your
+servers change only when you release.
 
 ## Setting up a tunnel
-
-A tunneled server gets two releases: the Traefik template first, then
-this one.
 
 1. Release devopsy-template-traefik on the server. Its [Behind a
    Cloudflare
@@ -49,20 +46,19 @@ this one.
    `tunnel` entrypoint by its network-scoped name, and Traefik routes it
    to the site by its host.
 
-The sites then answer at their wildcard URLs through Cloudflare. `devopsy
+The sites answer at their wildcard URLs through Cloudflare. `devopsy
 @<server>-traefik domains` (the Traefik template) reports the hosts, and
 the connectors it sees on the `tunnel` network.
 
 ## The token
 
-The token runs that tunnel and nothing else. A connector with it serves
-the tunnel's routes, and reads no DNS, no zone and no account setting.
-Someone holding it could still connect their own origin to your tunnel, so
-keep it where secrets live.
+The token only runs this tunnel. It gives no access to DNS, zones or
+account settings, but anyone holding it could connect their own origin to
+your tunnel, so treat it as a secret.
 
-It lives in the instance's `shared/.env` on the server, set with `--vars
-set`, and never in git. The value travels over SSH's stdin, never as an
-argument, and `config.yaml` names it in `secrets:`, so devopsy masks it in
+It lives in the instance's `shared/.env` on the server, out of git. Set it
+with `--vars set`, which sends the value over SSH's stdin rather than as
+an argument. `config.yaml` names it in `secrets:`, so devopsy masks it in
 `--vars`, `--env` and its messages.
 
 To rotate it, refresh the token in the dashboard (the tunnel's
@@ -73,43 +69,42 @@ devopsy @vm1:own/prod --vars set PROXY_TUNNEL_TOKEN
 devopsy @vm1:own/prod --reload
 ```
 
-`deploy` recreates the connectors one at a time ([How deploy
-works](#how-deploy-works)), so the tunnel keeps serving through the
-rotation, and a connector still on the old token keeps working until it
-is recreated. A token no tunnel accepts fails at the first connector,
-while the second keeps serving on the token it had. The token belongs to
-the instance, not to a release, so the tunnel then runs on the second
-connector alone until a good token is set and applied. `devopsy
-@vm1:own/prod logs cloudflared-a` says why the first one failed.
+`deploy` recreates the connectors one at a time, so the tunnel keeps
+serving through the rotation, and a connector still on the old token
+keeps working until it is recreated. A token no tunnel accepts fails at
+the first connector ([How deploy works](#how-deploy-works)). The token is
+set on the instance, so no rollback brings the old one back: the tunnel
+runs on the second connector alone until a good token is set and applied.
+`devopsy @vm1:own/prod logs cloudflared-a` says why the first one failed.
 
 ## One instance per account
 
 A tunnel belongs to a Cloudflare account, so this project runs one
-instance per account whose zones route through the server. Each instance
-has its own tunnel and token, and each account publishes its own routes to
-the same `http://traefik.tunnel:8081`:
+instance per account whose zones route through the server, with that
+account's tunnel and token. Every account publishes its routes to the
+same `http://traefik.tunnel:8081`:
 
 ```sh
 devopsy @vm1:own/prod --release    # your account: the server's base domain, your zones
 devopsy @vm1:acme/prod --release   # a client's account: their zones, through their edge
 ```
 
-Each instance is its own compose project on the server
+An instance is its own compose project on the server
 (`cloudflared-own-prod`, in `cloudflared/own/prod` under its release
 root), with its own `shared/.env`, so a token never leaves its account's
-instance. One is usually enough, since the server serves one client whose
-account holds every zone. The Traefik template's [A tunnel per Cloudflare
+instance. Most servers need one, since they host one client whose account
+holds every zone. The Traefik template's [A tunnel per Cloudflare
 account](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/tunnel.md#a-tunnel-per-cloudflare-account)
-says why a zone of another account cannot use the tunnel, when a second
-instance is the answer, and what the alternatives are.
+explains why a zone of another account cannot use the tunnel, when a
+second instance is needed, and the alternatives.
 
 A tunnel also belongs to one server, so never release the same token on
 two servers. Cloudflare accepts it, as replicas of one tunnel, but sends
-each request to whichever connector it picks, with no say per hostname.
-Each connector reaches its own server's Traefik, so a site on one server
-would answer from the other with a 404, at random. Give each server its
-own tunnel, and when a site moves to another server, move its hostname to
-that server's tunnel.
+each request to whichever connector it picks, and you cannot route by
+hostname. A connector reaches only its own server's Traefik, so a site on
+one server would answer from the other with a 404, at random. Give every
+server its own tunnel, and when a site moves to another server, move its
+hostname to that server's tunnel.
 
 ## How deploy works
 
@@ -118,55 +113,53 @@ on the same token, so the tunnel has two connectors, as Cloudflare
 recommends. They are two services rather than two replicas of one, since
 compose recreates every replica of a changed service at once.
 
-`deploy` brings each connector up and connected before it touches the
-other, so a release (a new `cloudflared`) or a reload (a new token) never
-leaves the tunnel without a connector. Each connector's healthcheck is
+`deploy` starts each connector and waits until it is connected before
+starting the other, so a release (a new `cloudflared`) or a reload (a new
+token) always leaves a connector serving. Each connector's healthcheck is
 `cloudflared tunnel ready`, which asks its own metrics endpoint (`/ready`,
 on the container's loopback, port 2000) and fails until a connection to
-the edge is up. So `up --wait` waits for a connector that serves, and a
-token or a version that never connects fails the release at the first
-connector, before the second is touched.
+the edge is up, and `up --wait` waits for that healthcheck. A token or a
+version that never connects therefore fails the release at the first
+connector, and the second keeps serving on the token and version it had.
 
 ## Network and hardening
 
 The connectors open connections to Cloudflare on port 7844 (QUIC over
-UDP, else HTTP/2 over TCP) and receive visitors through them, so nothing
-listens on the server for the sites. They join only Traefik's `tunnel`
-network and have no network of their own: they reach Traefik and the
-Internet through it, and nothing needs to reach them. Traefik trusts the
-visitor's IP (`CF-Connecting-IP`) from that network's subnet, so sites see
-their visitors, not the connector.
+UDP, else HTTP/2 over TCP) and receive visitors through them. They join
+only Traefik's `tunnel` network, and reach Traefik and the Internet
+through it; nothing needs to reach them. Traefik trusts the visitor's IP
+(`CF-Connecting-IP`) from that network's subnet, so sites see their
+visitors' IPs.
 
 `cloudflared` runs as the image's own UID 65532, with a read-only root
 filesystem, no capabilities and `no-new-privileges`. The image has no
 shell.
 
 `cloudflared` logs a warning when the host's UDP receive buffer is small
-for QUIC (`net.core.rmem_max`). It works all the same, and a `sysctl`
-raising the buffer to 7500000 silences the warning; devopsy-server's
-setup sets it.
+for QUIC (`net.core.rmem_max`). It still works, and a `sysctl` raising
+the buffer to 7500000 silences the warning; devopsy-server's setup sets
+it.
 
 ## Updates
 
 `compose.yaml` runs `cloudflare/cloudflared:latest`. cloudflared publishes
 no series tag to float on (its versions are dates, like `2026.10.5`), and
-a connector is something to keep current, never to roll back, so
-`config.yaml` keeps one release.
+a connector is only ever upgraded, so `config.yaml` keeps one release.
 
-Each release pulls `latest` and, when it changed, recreates the
+Every release pulls `latest` and, when it changed, recreates the
 connectors one at a time; a `--reload` pulls nothing. A server you never
 release keeps the version it has, so release on a schedule (monthly, from
 CI or a cron), or whenever you release the server's other projects.
 Cloudflare supports a version for about a year.
 
-When a new version never connects, the release fails at the first
-connector and the second keeps serving on the version it had. There is no
-rollback to go back to, so pin the last good version in `compose.yaml` and
-release. The second connector's log, `devopsy @vm1:own/prod logs
-cloudflared-b`, names the version it runs.
+A new version that never connects fails the release at the first
+connector ([How deploy works](#how-deploy-works)). There is no rollback to
+go back to, so pin the last good version in `compose.yaml` and release.
 
-Servers released at different times run different versions, and nothing
-in git records which. `devopsy @vm1:own/prod logs cloudflared-a` shows it.
+Nothing in git records which version a server runs, and servers released
+at different times differ. A connector's log names its version: `devopsy
+@vm1:own/prod logs cloudflared-a`, or after a failed release,
+`cloudflared-b` for the last good one.
 
 ## Destroying
 
@@ -183,9 +176,9 @@ network) and a token in `.devopsy/.env`, the connectors run locally too:
 devopsy --release
 ```
 
-Use a tunnel of its own, never a server's. Cloudflare spreads a tunnel's
-visitors over all its connectors, so a server's token here would send part
-of that server's visitors to your local Traefik.
+Use a tunnel made for local use. Cloudflare spreads a tunnel's visitors
+over all its connectors, so a server's token here would send part of that
+server's visitors to your local Traefik.
 
 ## License
 
