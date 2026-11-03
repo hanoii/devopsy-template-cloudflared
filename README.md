@@ -18,8 +18,8 @@ your copy, or what runs on your servers, but your own release.
 
 A tunneled server is the Traefik template released first, then this one.
 
-1. **Traefik.** Release devopsy-template-traefik on the server (its README,
-   ["Behind a Cloudflare Tunnel"](https://github.com/hanoii/devopsy-template-traefik#behind-a-cloudflare-tunnel):
+1. **Traefik.** Release devopsy-template-traefik on the server (its
+   ["Behind a Cloudflare Tunnel"](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/tunnel.md):
    the base domain, the DNS record, the SSL mode, what the edge covers).
    It creates the `tunnel` network, which this project joins, and listens
    on it for the connectors: a release here fails while that network does
@@ -95,8 +95,9 @@ Each instance is its own compose project on the server
 (`cloudflared-own-prod`, in `cloudflared/own/prod` under its release
 root), with its own `shared/.env`, so a token never leaves its account's
 instance. Usually one is enough: the server serves one client, whose
-account holds every zone. The Traefik template's README says when a
-second instance is the answer and what the alternatives are.
+account holds every zone. The Traefik template's [A tunnel per Cloudflare
+account](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/tunnel.md#a-tunnel-per-cloudflare-account)
+says when a second instance is the answer and what the alternatives are.
 
 A tunnel is one server's, too: never release the same token on two
 servers. Cloudflare accepts it, as replicas of one tunnel, but sends
