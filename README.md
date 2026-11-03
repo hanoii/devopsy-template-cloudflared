@@ -52,19 +52,17 @@ hosts and the connectors it sees on the tunnel network.
 
 ## The token
 
-- **What it allows:** running that tunnel, and nothing else: a connector
-  with it serves the tunnel's routes; it reads no DNS, no zone, no account
-  setting. Someone holding it could connect their own origin to your
-  tunnel, so keep it where secrets live.
-- **Where it lives:** the instance's `shared/.env` on the server, set with
-  `--vars set` (the value travels over SSH's stdin, never as an argument)
-  and never in git: `config.yaml` names it in `secrets:`, so devopsy
-  masks it in `--vars`, `--env` and its messages.
-- **Rotating it:** refresh the token in the dashboard (the tunnel's
-  configuration), then set and apply the new one. `deploy` recreates
-  the connectors one at a time, each up and connected before the next:
-  the tunnel keeps serving through the rotation, and connectors running on
-  the old token keep working until they are recreated.
+### What it allows
+
+Running that tunnel, and nothing else: a connector with it serves the tunnel's routes; it reads no DNS, no zone, no account setting. Someone holding it could connect their own origin to your tunnel, so keep it where secrets live.
+
+### Where it lives
+
+The instance's `shared/.env` on the server, set with `--vars set` (the value travels over SSH's stdin, never as an argument) and never in git: `config.yaml` names it in `secrets:`, so devopsy masks it in `--vars`, `--env` and its messages.
+
+### Rotating it
+
+Refresh the token in the dashboard (the tunnel's configuration), then set and apply the new one. `deploy` recreates the connectors one at a time, each up and connected before the next: the tunnel keeps serving through the rotation, and connectors running on the old token keep working until they are recreated.
 
 ```sh
 devopsy @vm1:own/prod --vars set PROXY_TUNNEL_TOKEN
@@ -110,32 +108,25 @@ hostname to that server's tunnel.
 
 ## How it works
 
-- **Two connectors, one at a time.** `compose.yaml` defines
-  `cloudflared-a` and `cloudflared-b` from one block, on the same token:
-  the tunnel has two connectors, as Cloudflare recommends, and `deploy`
-  brings each up and connected before touching the other, so a release
-  (a new `cloudflared`) or a reload (a new token) never leaves the tunnel
-  with none. Two services and not two replicas of one: compose recreates
-  every replica of a changed service at once.
-- **Connected means healthy.** Each connector's healthcheck is
-  `cloudflared tunnel ready`, which asks its own metrics endpoint
-  (`/ready`, on the container's loopback, port 2000)
-  and fails until a connection to the edge is up, so `up --wait` waits
-  for a connector that serves, and a token nobody accepts fails the
-  release before the second connector is touched.
-- **Outbound only.** The connectors open connections to Cloudflare on
-  port 7844 (QUIC over UDP, else HTTP/2 over TCP) and receive visitors
-  through them: nothing listens on the server for the sites. They join
-  Traefik's `tunnel` network alone and have none of their own: they reach
-  Traefik and the Internet through it, and nothing needs to reach them.
-  Traefik trusts the visitor's IP (`CF-Connecting-IP`) from that
-  network's subnet, so sites see visitors, not the connector.
-- **Hardening.** `cloudflared` runs as the image's own UID 65532, with a
-  read-only root filesystem, no capabilities and `no-new-privileges`; the
-  image has no shell.
-- **Destroying.** `devopsy @vm1:own/prod --destroy` takes the connectors
-  down and removes the instance; delete the tunnel in the dashboard too,
-  or keep it for another server.
+### Two connectors, one at a time
+
+`compose.yaml` defines `cloudflared-a` and `cloudflared-b` from one block, on the same token: the tunnel has two connectors, as Cloudflare recommends, and `deploy` brings each up and connected before touching the other, so a release (a new `cloudflared`) or a reload (a new token) never leaves the tunnel with none. Two services and not two replicas of one: compose recreates every replica of a changed service at once.
+
+### Connected means healthy
+
+Each connector's healthcheck is `cloudflared tunnel ready`, which asks its own metrics endpoint (`/ready`, on the container's loopback, port 2000) and fails until a connection to the edge is up, so `up --wait` waits for a connector that serves, and a token nobody accepts fails the release before the second connector is touched.
+
+### Outbound only
+
+The connectors open connections to Cloudflare on port 7844 (QUIC over UDP, else HTTP/2 over TCP) and receive visitors through them: nothing listens on the server for the sites. They join Traefik's `tunnel` network alone and have none of their own: they reach Traefik and the Internet through it, and nothing needs to reach them. Traefik trusts the visitor's IP (`CF-Connecting-IP`) from that network's subnet, so sites see visitors, not the connector.
+
+### Hardening
+
+`cloudflared` runs as the image's own UID 65532, with a read-only root filesystem, no capabilities and `no-new-privileges`; the image has no shell.
+
+### Destroying
+
+`devopsy @vm1:own/prod --destroy` takes the connectors down and removes the instance; delete the tunnel in the dashboard too, or keep it for another server.
 
 ## Updates
 
@@ -144,25 +135,21 @@ no series tag to float on (its versions are dates, like `2026.10.5`), and a
 connector is something to keep current, never to roll back. So
 `config.yaml` keeps one release.
 
-- **A release updates it.** Each release pulls `latest` and, when it
-  changed, recreates the connectors one at a time; a `--reload` pulls
-  nothing. A server you never release keeps the version it has, so
-  release on a schedule (monthly, from CI or a cron) or whenever you
-  release the server's other projects. Cloudflare supports a version for
-  about a year.
-- **A version that never connects fails the release at the first
-  connector,** the second still serving on the version it had: pin the
-  last good version in `compose.yaml` (the second connector's log,
-  `devopsy @vm1:own/prod logs cloudflared-b`, names the version it runs)
-  and release. There
-  is no rollback to go back to.
-- **Two servers released at different times** run different versions,
-  which nothing in git records; `devopsy @vm1:own/prod logs
-  cloudflared-a` shows which.
+### A release updates it
+
+Each release pulls `latest` and, when it changed, recreates the connectors one at a time; a `--reload` pulls nothing. A server you never release keeps the version it has, so release on a schedule (monthly, from CI or a cron) or whenever you release the server's other projects. Cloudflare supports a version for about a year.
+
+### A version that never connects
+
+A version that never connects fails the release at the first connector, the second still serving on the version it had: pin the last good version in `compose.yaml` (the second connector's log, `devopsy @vm1:own/prod logs cloudflared-b`, names the version it runs) and release. There is no rollback to go back to.
+
+### Two servers released at different times
+
+Two servers released at different times run different versions, which nothing in git records; `devopsy @vm1:own/prod logs cloudflared-a` shows which.
 
 `cloudflared` logs a warning when the host's UDP receive buffer is small
 for QUIC (`net.core.rmem_max`); it works all the same, and a `sysctl`
-raising it to 7500000 silences it (devopsy-server's README).
+raising it to 7500000 silences it, which devopsy-server's setup does.
 
 ## Locally
 
