@@ -18,24 +18,24 @@ your copy, or what runs on your servers, but your own release.
 
 A tunneled server is the Traefik template released first, then this one.
 
-1. **Traefik.** Release devopsy-template-traefik on the server (its README,
-   ["Behind a Cloudflare Tunnel"](https://github.com/hanoii/devopsy-template-traefik#behind-a-cloudflare-tunnel):
+1. Release devopsy-template-traefik on the server (its
+   ["Behind a Cloudflare Tunnel"](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/tunnel.md):
    the base domain, the DNS record, the SSL mode, what the edge covers).
    It creates the `tunnel` network, which this project joins, and listens
    on it for the connectors: a release here fails while that network does
    not exist.
-2. **The tunnel, in the Cloudflare dashboard** (Networking, Tunnels):
-   create a tunnel of the Cloudflared type and name it after the server;
-   copy its token from the connector install command (the value after
-   `--token`), without running the command. The dashboard then waits for
+2. Create the tunnel in the Cloudflare dashboard (Networking, Tunnels),
+   of the Cloudflared type, and name it after the server. Copy its token
+   from the connector install command (the value after `--token`),
+   without running the command. The dashboard then waits for
    a connector: release this project (step 3), and once it shows the two
    connectors, publish one application route, hostname
    `*.<base domain>` (the subdomain `*`), service `http://traefik.tunnel:8081`.
    That is where every request goes: Traefik's `tunnel` entrypoint, by
    its network-scoped name, which then routes it to the site by host.
-3. **This project**, as one instance of it, named after the account
-   (`own` here): the server in `.devopsy/.env` (gitignored) or the
-   address, the token in the instance's `shared/.env`, then the release.
+3. Release this project, as one instance of it named after the account
+   (`own` here). The server goes in `.devopsy/.env` (gitignored) or the
+   address, and the token in the instance's `shared/.env`.
 
 ```sh
 echo DEVOPSY_SERVER=devopsy@203.0.113.10 >> .devopsy/.env
@@ -95,8 +95,9 @@ Each instance is its own compose project on the server
 (`cloudflared-own-prod`, in `cloudflared/own/prod` under its release
 root), with its own `shared/.env`, so a token never leaves its account's
 instance. Usually one is enough: the server serves one client, whose
-account holds every zone. The Traefik template's README says when a
-second instance is the answer and what the alternatives are.
+account holds every zone. The Traefik template's [A tunnel per Cloudflare
+account](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/tunnel.md#a-tunnel-per-cloudflare-account)
+says when a second instance is the answer and what the alternatives are.
 
 A tunnel is one server's, too: never release the same token on two
 servers. Cloudflare accepts it, as replicas of one tunnel, but sends
