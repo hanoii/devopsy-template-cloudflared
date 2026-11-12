@@ -132,9 +132,10 @@ through it; nothing needs to reach them. Traefik trusts the visitor's IP
 (`CF-Connecting-IP`) from that network's subnet, so sites see their
 visitors' IPs.
 
-`cloudflared` runs as the image's own UID 65532, with a read-only root
-filesystem, no capabilities and `no-new-privileges`. The image has no
-shell.
+`cloudflared` runs as its environment's own uid (`DEVOPSY_UID`, which
+devopsy gives each environment on a server and no other environment's
+containers share), with a read-only root filesystem, no capabilities and
+`no-new-privileges`. The image has no shell.
 
 `cloudflared` logs a warning when the host's UDP receive buffer is small
 for QUIC (`net.core.rmem_max`). It still works, and a `sysctl` raising
