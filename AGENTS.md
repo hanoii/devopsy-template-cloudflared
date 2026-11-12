@@ -103,7 +103,7 @@ devopsy-template-cloudflared is a Cloudflare Tunnel's connectors for a [devopsy-
 - No Traefik labels and no `devopsy.import` of the base domain: nothing routes to this project.
 - The token is the one setting and the one secret, `PROXY_TUNNEL_TOKEN` (the proxy's contract, `PROXY_*`), required (`${...:?}`, so a release fails before it goes live while it is unset, with its `--vars set` line), listed in `secrets:`; it lets a connector run that tunnel and nothing else.
 - Everything about the tunnel but the token (its routes, the hostname) is in the Cloudflare dashboard, where the token is also rotated; `reload: deploy` applies a new one, connectors recreated one at a time.
-- The services keep the hardening: the image's own non-root UID (65532, stated in `user:` so an upstream change never changes it silently), `read_only`, `cap_drop: [ALL]` and `no-new-privileges`, nothing published and nothing mounted.
+- The services keep the hardening: the environment's own uid (`user: "${DEVOPSY_UID:?}:${DEVOPSY_UID:?}"`, never a default), `read_only`, `cap_drop: [ALL]` and `no-new-privileges`, nothing published and nothing mounted.
 - A capability comes back only with a stated reason (none: a connector only connects out and listens above 1024), and a new service gets the UID, `read_only`, `cap_drop: [ALL]` and `no-new-privileges`.
 - No em dashes anywhere (code, docs, commits).
 

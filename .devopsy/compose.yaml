@@ -26,16 +26,18 @@ x-cloudflared: &cloudflared
   command: [tunnel, run]
   restart: unless-stopped
   # Hardening checklist, for this service and the ones you add:
-  # - a fixed non-root UID, not the deploy user (1000, in the docker group:
-  #   an escape would land as root-equivalent): the image's own 65532,
-  #   stated here so a change upstream never changes it silently;
+  # - its environment's own uid, DEVOPSY_UID, which devopsy gives every
+  #   environment on a server and no other environment's containers share,
+  #   so an escape reaches nothing of theirs through /proc; never the
+  #   distroless images' 65532, which every image built on them shares, nor
+  #   the deploy user's (in the docker group) nor root;
   # - a read-only root filesystem: cloudflared writes nothing (checked);
   # - cap_drop ALL, adding back only a capability a stated reason needs
   #   (none here: it only connects out, and listens above 1024);
   # - no-new-privileges, so nothing gains privilege through setuid files;
   # - in images you build, no setuid binaries and no file capabilities
   #   the service does not need.
-  user: "65532:65532"
+  user: "${DEVOPSY_UID:?}:${DEVOPSY_UID:?}"
   read_only: true
   cap_drop: [ALL]
   security_opt:
