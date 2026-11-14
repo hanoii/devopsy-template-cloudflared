@@ -172,7 +172,8 @@ another server.
 ## Without a target
 
 With a local devopsy-template-traefik running (it creates the `tunnel`
-network) and a token in `.devopsy/.env`, the connectors run without a target too:
+network) and a token in `.devopsy/.env`, the connectors also run without a
+target:
 
 ```sh
 devopsy --release
