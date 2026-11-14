@@ -2,8 +2,8 @@
 ## Description: Roll out the connectors one at a time (run on the server by release)
 # The environments' release, rollback and reload run step (config.yaml),
 # run on the server by `devopsy @<target> --release`, `--rollback` and
-# `--reload`, and locally by `devopsy --release`. devopsy pulled the image
-# before the release went live (image mode).
+# `--reload`, and without a target by `devopsy --release`. devopsy pulled
+# the image before the release went live (image mode).
 #
 # One connector at a time, each up and healthy (a connection to the edge:
 # the healthcheck in compose.yaml) before the next is touched, so the
