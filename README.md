@@ -169,10 +169,10 @@ at different times differ. A connector's log names its version: `devopsy
 the instance. Delete the tunnel in the dashboard too, or keep it for
 another server.
 
-## Locally
+## Without a target
 
 With a local devopsy-template-traefik running (it creates the `tunnel`
-network) and a token in `.devopsy/.env`, the connectors run locally too:
+network) and a token in `.devopsy/.env`, the connectors run without a target too:
 
 ```sh
 devopsy --release
