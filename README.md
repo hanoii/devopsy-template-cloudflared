@@ -137,6 +137,12 @@ devopsy gives each environment on a server and no other environment's
 containers share), with a read-only root filesystem, no capabilities and
 `no-new-privileges`. The image has no shell.
 
+On a server behind an HTTP proxy, Docker gives every container the proxy
+settings of the deploy user's `~/.docker/config.json`
+([devopsy-cli's servers doc](https://github.com/hanoii/devopsy-cli/blob/main/docs/servers.md#behind-an-http-proxy)).
+The connectors need nothing listed there: they reach Traefik directly
+(their own `NO_PROXY`).
+
 `cloudflared` logs a warning when the host's UDP receive buffer is small
 for QUIC (`net.core.rmem_max`). It still works, and a `sysctl` raising
 the buffer to 7500000 silences the warning; devopsy-server's setup sets
