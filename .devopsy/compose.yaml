@@ -49,6 +49,14 @@ x-cloudflared: &cloudflared
     # else needs it, and the server's Traefik reports each connector by
     # its health in `domains`.
     TUNNEL_METRICS: 127.0.0.1:2000
+    # Behind an HTTP proxy Docker hands every container the server's
+    # settings, and cloudflared's requests to the origin follow them:
+    # traefik.tunnel is the only origin and the only host it reaches on the
+    # server, so this replaces the list (the image has no shell to append
+    # with). The edge connections are no HTTP requests. Both cases: Go will
+    # read no_proxy first.
+    NO_PROXY: traefik.tunnel
+    no_proxy: traefik.tunnel
   healthcheck:
     # /ready on the metrics address: 200 once a connection to the edge is
     # up, 503 until then (a wrong token, no way out on 7844), so `up

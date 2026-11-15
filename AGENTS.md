@@ -121,6 +121,7 @@ devopsy-template-cloudflared is a Cloudflare Tunnel's connectors for a [devopsy-
 - `tunnel ready` prints nothing on success (exit 0), and on failure the status and the `/ready` JSON (exit 1), so `deploy`'s last line reads the health from `devopsy ps --format '{{.Service}} {{.Health}}'` rather than running `ready` again.
 - The image has no shell (distroless), so a healthcheck can only be the binary itself, and `/ready` or `/metrics` is read by hand from a container in the connector's network namespace (`docker run --rm --network container:<id> busybox:1.37 wget -q -O - http://127.0.0.1:2000/ready`).
 - `read_only` needs no tmpfs: cloudflared writes nothing to its filesystem.
+- `NO_PROXY` and `no_proxy` are `traefik.tunnel` alone, replacing the server's list: behind an HTTP proxy Docker hands a connector that list, which never names Traefik, and its origin requests would go to the proxy; the image has no shell to append with, and a connector reaches nothing else on the server.
 - quic-go's warning about a small UDP receive buffer (7.5 MB recommended) is a host setting, not this template's: devopsy-server raises it, and a connector works regardless.
 
 ## Checks
